@@ -1,0 +1,272 @@
+[
+  {
+    "id": "1753117511720",
+    "solutionId": "1236985",
+    "solutionName": "LiquiBot",
+    "developerName": "Naty",
+    "validatorName": "Lu",
+    "taxonomy": "Nivel 5: Híbrida",
+    "scores": {
+      "complejidad_algoritmica": 4,
+      "opacidad_explicabilidad": 4,
+      "grado_autonomia": "3",
+      "impacto_economico": "2",
+      "impacto_operacional": "3",
+      "impacto_reputacional": "2"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "3.67",
+    "dim2Score": "2.33",
+    "finalScore": "2.87",
+    "tierResult": "Tier 1",
+    "createdAt": "2025-07-21T17:05:11.720Z",
+    "updatedAt": "2025-07-21T17:05:11.721Z"
+  },
+  {
+    "id": "1753117615417",
+    "solutionId": "12369874126545",
+    "solutionName": "QS Riesgo de Modelos",
+    "developerName": "Jorge",
+    "validatorName": "Diana",
+    "taxonomy": "Nivel 4: GenAI",
+    "scores": {
+      "complejidad_algoritmica": 4,
+      "opacidad_explicabilidad": 4,
+      "grado_autonomia": "1",
+      "impacto_economico": "1",
+      "impacto_operacional": "1",
+      "impacto_reputacional": "1"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "3.00",
+    "dim2Score": "1.00",
+    "finalScore": "1.80",
+    "tierResult": "Tier 2",
+    "createdAt": "2025-07-21T17:06:55.417Z",
+    "updatedAt": "2025-07-21T17:06:55.417Z"
+  },
+  {
+    "id": "1753117779856",
+    "solutionId": "78965123",
+    "solutionName": "Arbol decisión producto recomendado",
+    "developerName": "Duvan",
+    "validatorName": "Lina",
+    "taxonomy": "Nivel 1: Experto",
+    "scores": {
+      "complejidad_algoritmica": 1,
+      "opacidad_explicabilidad": 1,
+      "grado_autonomia": "2",
+      "impacto_economico": "2",
+      "impacto_operacional": "2",
+      "impacto_reputacional": "2"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "1.33",
+    "dim2Score": "2.00",
+    "finalScore": "1.73",
+    "tierResult": "Tier 3",
+    "createdAt": "2025-07-21T17:09:39.856Z",
+    "updatedAt": "2025-07-21T17:09:39.856Z"
+  },
+  {
+    "id": "1753117960879",
+    "solutionId": "785623845652",
+    "solutionName": "Scoring Crédito Comercial",
+    "developerName": "BAES",
+    "validatorName": "Jonathan",
+    "taxonomy": "Nivel 2: Tradicional",
+    "scores": {
+      "complejidad_algoritmica": 2,
+      "opacidad_explicabilidad": 2,
+      "grado_autonomia": "2",
+      "impacto_economico": "3",
+      "impacto_operacional": "2",
+      "impacto_reputacional": "2"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "2.00",
+    "dim2Score": "2.33",
+    "finalScore": "2.20",
+    "tierResult": "Tier 2",
+    "createdAt": "2025-07-21T17:12:40.879Z",
+    "updatedAt": "2025-07-21T17:12:40.879Z"
+  },
+  {
+    "id": "1753125438529",
+    "solutionId": "984569841236541",
+    "solutionName": "Proyección cuentas de deposito ",
+    "developerName": "hector",
+    "validatorName": "tito",
+    "taxonomy": "Nivel 2: Tradicional",
+    "scores": {
+      "complejidad_algoritmica": 2,
+      "opacidad_explicabilidad": 2,
+      "grado_autonomia": "1",
+      "impacto_economico": "1",
+      "impacto_operacional": "1",
+      "impacto_reputacional": "1"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "1.67",
+    "dim2Score": "1.00",
+    "finalScore": "1.27",
+    "tierResult": "Tier 3",
+    "createdAt": "2025-07-21T19:17:18.529Z",
+    "updatedAt": "2025-07-21T19:18:35.520Z"
+  },
+  {
+    "id": "1753125620717",
+    "solutionId": "985426987",
+    "solutionName": "RO-BOT",
+    "developerName": "Manuel",
+    "validatorName": "Jorge",
+    "taxonomy": "Nivel 5: Híbrida",
+    "scores": {
+      "complejidad_algoritmica": 4,
+      "opacidad_explicabilidad": 4,
+      "grado_autonomia": "4",
+      "impacto_economico": "3",
+      "impacto_operacional": "2",
+      "impacto_reputacional": "3"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "4.00",
+    "dim2Score": "2.67",
+    "finalScore": "3.20",
+    "tierResult": "Tier 1",
+    "createdAt": "2025-07-21T19:20:20.717Z",
+    "updatedAt": "2025-07-21T19:20:20.717Z"
+  },
+  {
+    "id": "1753126852606",
+    "solutionId": "98741268542652",
+    "solutionName": "Modelo PD 12M BEG BCOL",
+    "developerName": "Caro",
+    "validatorName": "Vero",
+    "taxonomy": "Nivel 2: Tradicional",
+    "scores": {
+      "complejidad_algoritmica": 2,
+      "opacidad_explicabilidad": 2,
+      "grado_autonomia": "3",
+      "impacto_economico": "4",
+      "impacto_operacional": "3",
+      "impacto_reputacional": "3"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "2.33",
+    "dim2Score": "3.33",
+    "finalScore": "2.93",
+    "tierResult": "Tier 1",
+    "createdAt": "2025-07-21T19:40:52.606Z",
+    "updatedAt": "2025-07-21T19:44:16.330Z"
+  },
+  {
+    "id": "1753128406009",
+    "solutionId": "0000005",
+    "solutionName": "scoring crédito consumo",
+    "developerName": "BAM/jose",
+    "validatorName": "mrm/Diana",
+    "taxonomy": "Nivel 3: ML",
+    "scores": {
+      "complejidad_algoritmica": 3,
+      "opacidad_explicabilidad": 3,
+      "grado_autonomia": "3",
+      "impacto_economico": "2",
+      "impacto_operacional": "2",
+      "impacto_reputacional": "2"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "3.00",
+    "dim2Score": "2.00",
+    "finalScore": "2.40",
+    "tierResult": "Tier 2",
+    "createdAt": "2025-07-21T20:06:46.009Z",
+    "updatedAt": "2025-07-21T20:06:46.009Z"
+  },
+  {
+    "id": "1753131026059",
+    "solutionId": "000000056952",
+    "solutionName": "Rating BEG Banistmo",
+    "developerName": "Miguel",
+    "validatorName": "Juan David",
+    "taxonomy": "Nivel 3: ML",
+    "scores": {
+      "complejidad_algoritmica": 3,
+      "opacidad_explicabilidad": 3,
+      "grado_autonomia": "3",
+      "impacto_economico": "3",
+      "impacto_operacional": "3",
+      "impacto_reputacional": "3"
+    },
+    "justifications": {
+      "complejidad_algoritmica": "",
+      "opacidad_explicabilidad": "",
+      "grado_autonomia": "",
+      "impacto_economico": "",
+      "impacto_operacional": "",
+      "impacto_reputacional": ""
+    },
+    "dim1Score": "3.00",
+    "dim2Score": "3.00",
+    "finalScore": "3.00",
+    "tierResult": "Tier 1",
+    "createdAt": "2025-07-21T20:50:26.059Z",
+    "updatedAt": "2025-07-21T20:50:48.556Z"
+  }
+]

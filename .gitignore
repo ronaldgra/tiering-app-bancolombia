@@ -1,0 +1,43 @@
+# Entorno virtual de Python
+venv/
+env/
+ENV/
+
+# Archivos de PyInstaller
+build/
+*.spec
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Archivos de sistema Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+*~
+
+# Archivos de VS Code
+.vscode/
+*.code-workspace
+
+# Archivos específicos del proyecto
+debug.log
+*.backup
+
+# Mantener el ejecutable final
+!dist/TieringApp-Bancolombia.exe
+!dist/README.md

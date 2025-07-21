@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herramienta de Tiering de Soluciones Analíticas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tier-badge { transition: all 0.3s ease-in-out; }
+        fieldset:disabled { opacity: 0.5; pointer-events: none; }
+        .justification-area { display: none; transition: opacity 0.5s; }
+        .justification-area.visible { display: block; }
+        .pdf-render-area { position: absolute; left: -9999px; top: 0; z-index: -100; }
+        .tooltip { position: relative; display: inline-block; cursor: help; }
+        .tooltip .tooltiptext {
+            visibility: hidden; width: 250px; background-color: #334155; color: #fff;
+            text-align: left; border-radius: 6px; padding: 10px; position: absolute;
+            z-index: 50; bottom: 125%; left: 50%; margin-left: -125px;
+            opacity: 0; transition: opacity 0.3s; font-size: 0.875rem; line-height: 1.4;
+        }
+        .tooltip .tooltiptext::after {
+            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px;
+            border-width: 5px; border-style: solid; border-color: #334155 transparent transparent transparent;
+        }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        
+        #toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; display: flex; flex-direction: column; gap: 0.75rem; }
+        .toast { display: flex; align-items: center; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); transform: translateX(120%); opacity: 0; transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast-success { background-color: #D1FAE5; color: #065F46; }
+        .toast-error { background-color: #FEE2E2; color: #991B1B; }
+        .toast-info { background-color: #DBEAFE; color: #1E40AF; }
+
+        #loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 200; display: none; justify-content: center; align-items: center; }
+        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Clases de accesibilidad */
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+        .focus-visible:focus { outline: 2px solid #4F46E5; outline-offset: 2px; }
+        
+        /* Mejor contraste para campos de error */
+        .border-red-500 { border-color: #DC2626 !important; box-shadow: 0 0 0 1px #DC2626; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+    <div id="toast-container" role="alert" aria-live="polite" aria-atomic="true"></div>
+    <div id="loader-overlay" role="status" aria-label="Cargando contenido"><div class="loader"></div></div>
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8">
+        <header class="mb-8 text-center">
+            <img src="https://www.grupobancolombia.com/wcm/connect/www.grupobancolombia.com15880/dd92ab0c-ceb1-4e1a-82fc-d1a1d4cad0bd/logoDesk.png?MOD=AJPERES&CACHEID=ROOTWORKSPACE.Z18_9O44G4S049MAD06H7SNS78I2D3-dd92ab0c-ceb1-4e1a-82fc-d1a1d4cad0bd-pb4Fl5H" alt="Logo Grupo Bancolombia" class="h-12 mx-auto mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Herramienta de Tiering de Soluciones Analíticas</h1>
+            <p class="mt-2 text-md text-gray-600">Versión Local - Metodología v2.1 - Gerencia de Riesgo de Modelos</p>
+        </header>
+
+        <div class="space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <aside class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md h-fit">
+                     <h2 class="text-xl font-bold mb-4 border-b pb-2">Mis Evaluaciones Guardadas</h2>
+                     <button id="new-evaluation-btn" class="w-full bg-blue-600 hover:bg-blue-700 focus-visible:focus text-white font-bold py-3 px-4 rounded-lg mb-4 text-center" tabindex="0">Crear Nueva Evaluación</button>
+                     <div id="evaluations-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                     <div class="mt-4 pt-4 border-t space-y-2">
+                        <button id="export-db-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Exportar Base de Datos</button>
+                        <input type="file" id="import-db-input" accept="application/json" class="hidden" />
+                        <button id="import-db-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Importar Base de Datos</button>
+                     </div>
+                </aside>
+                
+                <aside id="results-panel" class="lg:col-span-3">
+                    <div class="bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-bold mb-4 border-b pb-2 text-center">Resultado del Tiering</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                            <div class="text-center">
+                                <div id="result-tier" class="mb-4">
+                                    <span class="tier-badge text-4xl font-bold bg-gray-200 text-gray-700 px-8 py-4 rounded-full">N/A</span>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                                        <span class="font-semibold">Puntuación Final</span>
+                                        <span id="final-score" class="font-bold text-lg text-indigo-600">0.00</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2">
+                                        <span>Prom. Dimensión 1 (Complejidad)</span>
+                                        <span id="dim1-score" class="font-semibold">0.00</span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-2">
+                                        <span>Prom. Dimensión 2 (Impacto)</span>
+                                        <span id="dim2-score" class="font-semibold">0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 md:mt-0">
+                                 <h3 class="text-lg font-semibold text-center mb-2">Perfil de Riesgo</h3>
+                                 <canvas id="riskRadarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+            
+            <main>
+                <div id="prerequisites-section" class="space-y-6">
+                    <section class="bg-white p-6 rounded-xl shadow-md">
+                        <h2 class="text-xl font-bold mb-4 border-b pb-2">1. Datos de la Solución y Responsables</h2>
+                        <div id="solution-data-inputs" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
+                    </section>
+                    <section class="bg-white p-6 rounded-xl shadow-md">
+                        <h2 class="text-xl font-bold mb-4 border-b pb-2">2. Clasificación Taxonómica</h2>
+                        <div id="taxonomy-options" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                    </section>
+                </div>
+
+                <fieldset id="evaluation-form-fieldset" disabled class="space-y-6 mt-8" aria-describedby="form-help">
+                    <legend class="sr-only">Formulario de evaluación de tiering</legend>
+                    <div id="form-help" class="sr-only">Complete todos los campos requeridos para habilitar la evaluación</div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                         <div class="flex items-center justify-between">
+                             <div class="flex flex-col sm:flex-row gap-3 flex-grow">
+                                <button id="save-evaluation-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Guardar Evaluación</button>
+                                <button id="pdf-button" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Generar PDF</button>
+                                <button id="csv-button" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg">Exportar CSV</button>
+                                <button id="delete-evaluation-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg hidden">Eliminar</button>
+                             </div>
+                             <div id="autosave-status" class="ml-4 text-sm text-gray-500 italic w-28 text-right"></div>
+                         </div>
+                    </div>
+
+                    <div id="evaluation-form-container" class="space-y-6"></div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <button id="save-and-scroll-btn" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                            Guardar y Ver Resultado
+                        </button>
+                    </div>
+                </fieldset>
+            </main>
+        </div>
+    </div>
+    
+    <div id="pdf-report-container" class="pdf-render-area"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const criteria = {
+                dimension1: [
+                    { id: 'complejidad_algoritmica', name: 'Complejidad Algorítmica', help: 'Mide la sofisticación inherente de la tecnología. Se asigna automáticamente según la Taxonomía.', levels_help: ['Lógica simple y explícita.', 'Técnicas estadísticas bien establecidas.', 'Algoritmos complejos cuyo funcionamiento no es trivial.', 'Arquitecturas de aprendizaje profundo a gran escala.'] },
+                    { id: 'opacidad_explicabilidad', name: 'Opacidad y Explicabilidad (XAI)', help: 'Evalúa la facilidad para comprender por qué una solución produce un resultado. Se asigna automáticamente.', levels_help: ['Transparente (lógica directamente observable).', 'Interpretable (se pueden analizar sus componentes).', 'Caja Negra con XAI (requiere técnicas post-hoc).', 'Opaco (lógica interna inescrutable).'] },
+                    { id: 'grado_autonomia', name: 'Grado de Autonomía', help: 'Mide el nivel de intervención humana requerida en la operación de la solución.', levels: ['Asistido', 'Humano en el Circuito', 'Humano sobre el Circuito', 'Autónomo'], levels_help: ['La solución ofrece información, pero la decisión y acción final son 100% humanas.', 'La solución recomienda una acción, pero requiere aprobación humana para ejecutarla.', 'La solución actúa por defecto, pero un humano supervisa y puede intervenir o anular la acción.', 'La solución toma y ejecuta decisiones críticas sin intervención humana en tiempo real.'] }
+                ],
+                dimension2: [
+                    { id: 'impacto_economico', name: 'Impacto Económico', help: 'Evalúa el impacto monetario directo que una falla podría causar.', levels: ['Bajo', 'Moderado', 'Alto', 'Crítico'], levels_help: ['Un fallo no produce pérdidas económicas cuantificables significativas. Se usa para fines operativos internos con bajo riesgo.', 'Un fallo podría resultar en pérdidas menores a moderadas, gestionables. Apoya decisiones con implicaciones financieras notables.', 'Un fallo podría resultar en multas o pérdidas operacionales sustanciales. Se usa en decisiones críticas o reportes regulatorios.', 'Un fallo podría comprometer la continuidad del negocio o requerir rescates financieros. Maneja transacciones masivas.'] },
+                    { id: 'impacto_operacional', name: 'Impacto Operacional', help: 'Mide cómo una falla afectaría la continuidad de los procesos.', levels: ['Bajo', 'Moderado', 'Alto', 'Crítico'], levels_help: ['Interrupción mínima en procesos internos no esenciales. Recuperación rápida.', 'Interrupción notable en un área o afecta la experiencia del cliente de forma limitada. Apoya procesos misionales de menor escala.', 'Afecta significativamente la entrega de productos/servicios clave o compromete la integridad de la información financiera (procesos SOX).', 'Interrupción severa de las operaciones del banco. Es fundamental para procesos críticos BIA.'] },
+                    { id: 'impacto_reputacional', name: 'Impacto Reputacional y Ético', help: 'Estima el daño potencial a la marca, confianza y riesgos de sesgo.', levels: ['Bajo', 'Moderado', 'Alto', 'Crítico'], levels_help: ['Podría generar quejas de clientes de forma aislada y manejable. Riesgo de sesgo mínimo.', 'Podría generar ruido en redes sociales o medios locales. Riesgos de sesgo mitigables.', 'Podría erosionar significativamente la confianza del público en la marca. Riesgo de decisiones discriminatorias a gran escala.', 'Podría desencadenar una crisis de relaciones públicas. Toma decisiones sobre derechos fundamentales o puede causar daño social.'] },
+                ]
+            };
+            const taxonomy = [
+                {id: 'tax_0', name: 'Nivel 0: Cómputo', help: 'Aplicaciones que ejecutan cálculos directos sin lógica decisional compleja.', autoScores: { complejidad_algoritmica: 1, opacidad_explicabilidad: 1 }},
+                {id: 'tax_1', name: 'Nivel 1: Experto', help: 'Codifican lógica, reglas o árboles de decisión definidos por expertos.', autoScores: { complejidad_algoritmica: 1, opacidad_explicabilidad: 1 }},
+                {id: 'tax_2', name: 'Nivel 2: Tradicional', help: 'Modelos estadísticos o econométricos con supuestos claros.', autoScores: { complejidad_algoritmica: 2, opacidad_explicabilidad: 2 }},
+                {id: 'tax_3', name: 'Nivel 3: ML', help: 'Algoritmos que aprenden patrones complejos a partir de datos.', autoScores: { complejidad_algoritmica: 3, opacidad_explicabilidad: 3 }},
+                {id: 'tax_4', name: 'Nivel 4: GenAI', help: 'Modelos a gran escala capaces de crear contenido nuevo.', autoScores: { complejidad_algoritmica: 4, opacidad_explicabilidad: 4 }},
+                {id: 'tax_5', name: 'Nivel 5: Híbrida', help: 'Sistemas que combinan componentes de múltiples niveles.', autoScores: { complejidad_algoritmica: 4, opacidad_explicabilidad: 4 }}
+            ];
+
+            const evaluationFormContainer = document.getElementById('evaluation-form-container');
+            const evaluationFieldset = document.getElementById('evaluation-form-fieldset');
+            const evaluationsList = document.getElementById('evaluations-list');
+            const newEvaluationBtn = document.getElementById('new-evaluation-btn');
+            const saveEvaluationBtn = document.getElementById('save-evaluation-btn');
+            const deleteEvaluationBtn = document.getElementById('delete-evaluation-btn');
+            const pdfButton = document.getElementById('pdf-button');
+            const csvButton = document.getElementById('csv-button');
+            const exportDbBtn = document.getElementById('export-db-btn');
+            const importDbBtn = document.getElementById('import-db-btn');
+            const importDbInput = document.getElementById('import-db-input');
+            const autosaveStatus = document.getElementById('autosave-status');
+            const loaderOverlay = document.getElementById('loader-overlay');
+            const saveAndScrollBtn = document.getElementById('save-and-scroll-btn');
+            const resultsPanel = document.getElementById('results-panel');
+            let riskRadarChart;
+            let currentEvaluationId = null;
+            let autoSaveTimeout;
+
+            const getEvaluations = () => { 
+                try { 
+                    const e = localStorage.getItem('tieringEvaluations'); 
+                    return e ? JSON.parse(e) : [] 
+                } catch (e) { 
+                    console.error('Error al recuperar evaluaciones:', e); 
+                    if (e.name === 'QuotaExceededError') {
+                        showToast('Almacenamiento lleno. Exporte y elimine evaluaciones antiguas.', 'error');
+                    }
+                    return [] 
+                } 
+            };
+            const saveEvaluations = (e) => { 
+                try { 
+                    localStorage.setItem('tieringEvaluations', JSON.stringify(e)) 
+                } catch (error) { 
+                    console.error('Error al guardar evaluaciones:', error);
+                    if (error.name === 'QuotaExceededError') {
+                        showToast('Almacenamiento lleno. No se pudo guardar. Exporte y elimine evaluaciones.', 'error');
+                    } else {
+                        showToast('Error al guardar. Intente nuevamente.', 'error');
+                    }
+                } 
+            };
+
+            const renderDashboard = () => {
+                const evaluations = getEvaluations();
+                evaluationsList.innerHTML = '';
+                if (evaluations.length === 0) {
+                    evaluationsList.innerHTML = `<p class="text-sm text-gray-500 text-center p-4">No hay evaluaciones guardadas.</p>`;
+                    return;
+                }
+                evaluations.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+                evaluations.forEach(ev => {
+                    const item = document.createElement('div');
+                    item.className = 'p-3 border rounded-lg cursor-pointer hover:bg-gray-100 transition-colors';
+                    item.innerHTML = `<div class="flex justify-between items-center"><span class="font-semibold text-gray-700">${ev.solutionName||"Sin Nombre"}</span><span class="text-sm font-bold text-white px-2 py-0.5 rounded-full ${getTierColor(ev.tierResult)}">${ev.tierResult||"N/A"}</span></div><p class="text-xs text-gray-500 mt-1">ID: ${ev.solutionId||"N/A"}</p><p class="text-xs text-gray-500">Actualizado: ${new Date(ev.updatedAt).toLocaleString('es-ES')}</p>`;
+                    item.addEventListener('click', () => loadEvaluation(ev.id));
+                    evaluationsList.appendChild(item);
+                });
+            };
+            
+            const getTierColor = (tier) => {
+                if (tier === 'Tier 1') return 'bg-red-500';
+                if (tier === 'Tier 2') return 'bg-yellow-500';
+                if (tier === 'Tier 3') return 'bg-green-500';
+                return 'bg-gray-400';
+            };
+
+            const buildForm = () => {
+                const solutionDataContainer = document.getElementById('solution-data-inputs');
+                const fieldMappings = {
+                    solution_id: 'ID de la Solución',
+                    solution_name: 'Nombre de la Solución',
+                    developer_name: 'Nombre del Desarrollador',
+                    validator_name: 'Nombre del Validador'
+                };
+                Object.keys(fieldMappings).forEach(id => {
+                    const label = fieldMappings[id];
+                    const helpText = { solution_id: 'Identificador único y trazable.', solution_name: 'Nombre descriptivo y oficial.', developer_name: 'Equipo responsable del desarrollo.', validator_name: 'Equipo responsable de la validación.' }[id];
+                    const div = document.createElement('div');
+                    div.innerHTML = `<label for="${id}" class="block text-sm font-medium text-gray-700">${label}</label><input type="text" id="${id}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"><p class="mt-1 text-xs text-red-600 hidden" id="${id}-error">Este campo es obligatorio.</p><p class="mt-2 text-xs text-gray-500">${helpText}</p>`;
+                    solutionDataContainer.appendChild(div);
+                });
+
+                const taxonomyContainer = document.getElementById('taxonomy-options');
+                taxonomy.forEach(tax => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'border rounded-lg p-3';
+                    wrapper.innerHTML = `<div class="flex items-center mb-2"><input type="radio" id="${tax.id}" name="taxonomy" value="${tax.name}" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"><label for="${tax.id}" class="ml-2 block text-sm font-semibold text-gray-800">${tax.name}</label></div><p class="text-xs text-gray-600 ml-5">${tax.help}</p>`;
+                    taxonomyContainer.appendChild(wrapper);
+                });
+
+                const createCriterion = (criterion, isManual = true) => {
+                     const container = document.createElement('div');
+                        container.className = 'border border-gray-200 p-4 rounded-lg';
+                        let optionsHtml;
+                        if (isManual) {
+                            optionsHtml = `<div class="space-y-3">${[1,2,3,4].map((level, index) => `<div class="relative flex items-start tooltip"><div class="flex h-5 items-center"><input type="radio" id="${criterion.id}_${level}" name="${criterion.id}" value="${level}" class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"></div><div class="ml-3 text-sm"><label for="${criterion.id}_${level}" class="font-medium text-gray-800">Nivel ${level}: ${criterion.levels[index]}</label></div><span class="tooltiptext">${criterion.levels_help[index]}</span></div>`).join('')}</div>`;
+                        } else {
+                            optionsHtml = `<div class="text-lg font-bold text-indigo-600" id="${criterion.id}_auto_score">N/A</div>`;
+                        }
+                        container.innerHTML = `<h4 class="text-md font-semibold text-gray-800">${criterion.name} ${!isManual ? '(Automático)' : ''}</h4><p class="text-sm text-gray-600 mb-4">${criterion.help}</p>${optionsHtml}<div id="justification_${criterion.id}" class="justification-area mt-4"><label for="text_${criterion.id}" class="block text-sm font-medium text-gray-700">Justificación</label><textarea id="text_${criterion.id}" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Explique brevemente el porqué de su selección..."></textarea></div>`;
+                     return container;
+                };
+                
+                evaluationFormContainer.innerHTML = `
+                    <section id="dimension1" class="bg-white p-6 rounded-xl shadow-md space-y-6"><h2 class="text-xl font-bold mb-2 border-b pb-2">3. Dimensión 1: Complejidad e Incertidumbre (40%)</h2></section>
+                    <section id="dimension2" class="bg-white p-6 rounded-xl shadow-md space-y-6"><h2 class="text-xl font-bold mb-2 border-b pb-2">4. Dimensión 2: Impacto y Criticidad (60%)</h2></section>
+                `;
+
+                const dim1Container = document.getElementById('dimension1');
+                dim1Container.appendChild(createCriterion(criteria.dimension1[0], false));
+                dim1Container.appendChild(createCriterion(criteria.dimension1[1], false));
+                dim1Container.appendChild(createCriterion(criteria.dimension1[2], true));
+
+                const dim2Container = document.getElementById('dimension2');
+                dim2Container.append(...criteria.dimension2.map(c => createCriterion(c, true)));
+            };
+            
+            const addEventListeners = () => {
+                newEvaluationBtn.addEventListener('click', handleNewEvaluation);
+                saveEvaluationBtn.addEventListener('click', handleSave);
+                deleteEvaluationBtn.addEventListener('click', handleDelete);
+                pdfButton.addEventListener('click', generatePDF);
+                csvButton.addEventListener('click', exportCSV);
+                saveAndScrollBtn.addEventListener('click', () => {
+                    if (handleSave()) {
+                        resultsPanel.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+
+                document.querySelectorAll('input[name="taxonomy"]').forEach(el => el.addEventListener('change', handleTaxonomyChange));
+                document.querySelectorAll('#evaluation-form-container input[type="radio"]').forEach(radio => {
+                    if (radio.name !== 'taxonomy') {
+                        radio.addEventListener('change', handleRadioChange);
+                    }
+                });
+                document.querySelectorAll('#prerequisites-section input').forEach(el => el.addEventListener('input', checkPrerequisites));
+                document.querySelectorAll('input, textarea').forEach(el => {
+                    el.addEventListener('input', triggerAutoSave);
+                });
+                exportDbBtn.addEventListener('click', () => {
+                    const evaluations = getEvaluations();
+                    if (evaluations.length === 0) {
+                        showToast("No hay evaluaciones para exportar.", 'info');
+                        return;
+                    }
+                    const blob = new Blob([JSON.stringify(evaluations, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'evaluaciones_tiering.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+                importDbBtn.addEventListener('click', () => importDbInput.click());
+                importDbInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const imported = JSON.parse(event.target.result);
+                            if (Array.isArray(imported)) {
+                                saveEvaluations(imported);
+                                showToast('Base de datos importada correctamente.', 'success');
+                                renderDashboard();
+                            } else {
+                                showToast('El archivo no tiene el formato correcto.', 'error');
+                            }
+                        } catch (err) {
+                            showToast('Error al importar el archivo: ' + err.message, 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+            };
+
+            let calculateTimeout;
+            const debouncedCalculate = () => {
+                clearTimeout(calculateTimeout);
+                calculateTimeout = setTimeout(calculateScores, 300);
+            };
+
+            const handleRadioChange = (event) => {
+                const criterionId = event.target.name;
+                const justificationDiv = document.getElementById(`justification_${criterionId}`);
+                if (justificationDiv) justificationDiv.classList.add('visible');
+                debouncedCalculate();
+            };
+            
+            const handleTaxonomyChange = () => {
+                const selectedTaxonomy = document.querySelector('input[name="taxonomy"]:checked');
+                if (!selectedTaxonomy) return;
+
+                const taxData = taxonomy.find(t => t.name === selectedTaxonomy.value);
+                if (!taxData) return;
+
+                for (const [key, value] of Object.entries(taxData.autoScores)) {
+                    const scoreElement = document.getElementById(`${key}_auto_score`);
+                    if (scoreElement) {
+                        if (value > 0) {
+                            const criterion = criteria.dimension1.find(c => c.id === key);
+                            const helpText = criterion.levels_help[value - 1];
+                            scoreElement.innerHTML = `Nivel ${value} <span class="block text-sm font-normal text-gray-500 mt-1">${helpText}</span>`;
+                        } else {
+                            scoreElement.innerHTML = `Evaluación Manual Requerida`;
+                        }
+                    }
+                }
+                checkPrerequisites();
+                debouncedCalculate();
+            };
+
+            const handleNewEvaluation = () => {
+                currentEvaluationId = null;
+                evaluationFieldset.disabled = true;
+                deleteEvaluationBtn.classList.add('hidden');
+                document.querySelectorAll('input[type="text"], textarea').forEach(input => input.value = '');
+                document.querySelectorAll('input[type="radio"]').forEach(radio => radio.checked = false);
+                document.querySelectorAll('.justification-area').forEach(area => area.classList.remove('visible'));
+                document.querySelectorAll('[id$="_auto_score"]').forEach(el => el.textContent = 'N/A');
+                localStorage.removeItem('tieringAutoSave');
+                autosaveStatus.textContent = '';
+                calculateScores();
+            };
+
+            const handleSave = () => {
+                if (!validateForm()) {
+                    showToast('Por favor, corrija los errores en el formulario.', 'error');
+                    return false;
+                }
+
+                const evaluations = getEvaluations();
+                const data = getEvaluationData();
+                
+                if (currentEvaluationId) {
+                    const index = evaluations.findIndex(ev => ev.id === currentEvaluationId);
+                    if (index > -1) evaluations[index] = { ...evaluations[index], ...data, updatedAt: new Date().toISOString() };
+                } else {
+                    const newEvaluation = { id: Date.now().toString(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+                    evaluations.push(newEvaluation);
+                    currentEvaluationId = newEvaluation.id;
+                }
+                
+                saveEvaluations(evaluations);
+                showToast('Evaluación guardada con éxito!', 'success');
+                localStorage.removeItem('tieringAutoSave');
+                autosaveStatus.textContent = '';
+                renderDashboard();
+                deleteEvaluationBtn.classList.remove('hidden');
+                return true;
+            };
+
+            const loadEvaluation = (id) => {
+                const evaluations = getEvaluations();
+                const evaluation = evaluations.find(ev => ev.id === id);
+                if (!evaluation) return;
+                
+                handleNewEvaluation();
+                currentEvaluationId = id;
+
+                document.getElementById('solution_id').value = evaluation.solutionId || '';
+                document.getElementById('solution_name').value = evaluation.solutionName || '';
+                document.getElementById('developer_name').value = evaluation.developerName || '';
+                document.getElementById('validator_name').value = evaluation.validatorName || '';
+                
+                if(evaluation.taxonomy) {
+                    const taxRadio = document.querySelector(`input[name="taxonomy"][value="${evaluation.taxonomy}"]`);
+                    if (taxRadio) {
+                        taxRadio.checked = true;
+                    }
+                }
+
+                if(evaluation.scores) {
+                    for (const key of Object.keys(evaluation.scores)) {
+                        const scoreValue = evaluation.scores[key];
+                        const radio = document.querySelector(`input[name="${key}"][value="${scoreValue}"]`);
+                        if(radio) {
+                            radio.checked = true;
+                            const justificationDiv = document.getElementById(`justification_${key}`);
+                            if (justificationDiv) justificationDiv.classList.add('visible');
+                        }
+                    }
+                }
+                
+                if(evaluation.justifications) {
+                    for (const [key, value] of Object.entries(evaluation.justifications)) {
+                         const textarea = document.getElementById(`text_${key}`);
+                         if (textarea) textarea.value = value;
+                    }
+                }
+                handleTaxonomyChange();
+                calculateScores();
+            };
+            
+            const handleDelete = () => {
+                if (!currentEvaluationId) return;
+                if (confirm('¿Estás seguro de que quieres eliminar esta evaluación? Esta acción no se puede deshacer.')) {
+                    let evaluations = getEvaluations();
+                    evaluations = evaluations.filter(ev => ev.id !== currentEvaluationId);
+                    saveEvaluations(evaluations);
+                    handleNewEvaluation();
+                    renderDashboard();
+                    showToast('Evaluación eliminada.', 'info');
+                }
+            };
+            
+            const getEvaluationData = (isAutoSave = false) => {
+                const data = {
+                    solutionId: document.getElementById('solution_id').value,
+                    solutionName: document.getElementById('solution_name').value,
+                    developerName: document.getElementById('developer_name').value,
+                    validatorName: document.getElementById('validator_name').value,
+                    taxonomy: document.querySelector('input[name="taxonomy"]:checked')?.value,
+                    scores: {},
+                    justifications: {}
+                };
+
+                if (!isAutoSave) {
+                    data.dim1Score = document.getElementById('dim1-score').textContent;
+                    data.dim2Score = document.getElementById('dim2-score').textContent;
+                    data.finalScore = document.getElementById('final-score').textContent;
+                    data.tierResult = document.querySelector('#result-tier .tier-badge').textContent;
+                }
+                
+                const selectedTaxonomy = taxonomy.find(t => t.name === data.taxonomy);
+                if (selectedTaxonomy) {
+                    data.scores.complejidad_algoritmica = selectedTaxonomy.autoScores.complejidad_algoritmica;
+                    data.scores.opacidad_explicabilidad = selectedTaxonomy.autoScores.opacidad_explicabilidad;
+                }
+
+                [...criteria.dimension1, ...criteria.dimension2].forEach(c => {
+                    const radio = document.querySelector(`input[name="${c.id}"]:checked`);
+                    if (radio) data.scores[c.id] = radio.value || '0';
+                    const justification = document.getElementById(`text_${c.id}`);
+                    if (justification) data.justifications[c.id] = justification.value || '';
+                });
+                return data;
+            };
+            
+            const calculateScores = () => {
+                let dim1Scores = [], dim2Scores = [], radarData = [];
+                const selectedTaxonomyName = document.querySelector('input[name="taxonomy"]:checked')?.value;
+                const selectedTaxonomy = taxonomy.find(t => t.name === selectedTaxonomyName);
+
+                const autoScores = selectedTaxonomy ? selectedTaxonomy.autoScores : { complejidad_algoritmica: 0, opacidad_explicabilidad: 0 };
+                dim1Scores.push(autoScores.complejidad_algoritmica, autoScores.opacidad_explicabilidad);
+                radarData.push(autoScores.complejidad_algoritmica, autoScores.opacidad_explicabilidad);
+                
+                const autonomiaScore = document.querySelector('input[name="grado_autonomia"]:checked');
+                if (autonomiaScore) dim1Scores.push(parseInt(autonomiaScore.value));
+                radarData.push(autonomiaScore ? parseInt(autonomiaScore.value) : 0);
+
+                criteria.dimension2.forEach(c => {
+                    const selected = document.querySelector(`input[name="${c.id}"]:checked`);
+                    const score = selected ? parseInt(selected.value) : 0;
+                    if (selected) dim2Scores.push(score);
+                    radarData.push(score);
+                });
+                
+                const dim1Avg = dim1Scores.length === 3 && !dim1Scores.includes(0) ? dim1Scores.reduce((a, b) => a + b, 0) / 3 : 0;
+                const dim2Avg = dim2Scores.length === 3 ? dim2Scores.reduce((a, b) => a + b, 0) / 3 : 0;
+                
+                const finalScore = (dim1Avg * 0.4) + (dim2Avg * 0.6);
+
+                document.getElementById('dim1-score').textContent = dim1Avg.toFixed(2);
+                document.getElementById('dim2-score').textContent = dim2Avg.toFixed(2);
+                document.getElementById('final-score').textContent = finalScore.toFixed(2);
+                
+                if (riskRadarChart) {
+                    riskRadarChart.data.datasets[0].data = radarData;
+                    riskRadarChart.update();
+                }
+
+                const badge = document.querySelector('#result-tier .tier-badge');
+                let tier = 'N/A', tierClass = 'bg-gray-200 text-gray-700';
+                const allCriteriaSelected = dim1Scores.length === 3 && !dim1Scores.includes(0) && dim2Scores.length === 3;
+                if (allCriteriaSelected) {
+                     if (finalScore > 2.75) { tier = 'Tier 1'; tierClass = 'bg-red-100 text-red-800'; } 
+                     else if (finalScore > 1.75) { tier = 'Tier 2'; tierClass = 'bg-yellow-100 text-yellow-800'; } 
+                     else { tier = 'Tier 3'; tierClass = 'bg-green-100 text-green-800'; }
+                }
+                badge.textContent = tier;
+                badge.className = `tier-badge text-4xl font-bold px-8 py-4 rounded-full ${tierClass}`;
+            };
+
+            const initializeChart = () => {
+                const ctx = document.getElementById('riskRadarChart').getContext('2d');
+                Chart.defaults.devicePixelRatio = window.devicePixelRatio; 
+                riskRadarChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: [...criteria.dimension1.map(c => c.name), ...criteria.dimension2.map(c => c.name)],
+                        datasets: [{
+                            label: 'Perfil de Riesgo',
+                            data: Array(6).fill(0),
+                            backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(79, 70, 229, 1)',
+                        }]
+                    },
+                    options: { scales: { r: { beginAtZero: true, max: 4, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+                });
+            };
+            
+            const generatePDF = () => {
+                // Validación previa
+                const data = getEvaluationData();
+                if (data.tierResult === 'N/A') {
+                    showToast('Por favor, complete toda la evaluación antes de generar el reporte.', 'error');
+                    return;
+                }
+
+                // Validación de dependencias
+                if (typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined') {
+                    showToast('Las librerías para generar PDF no se han cargado. Revise su conexión y refresque la página.', 'error');
+                    return;
+                }
+
+                showLoader();
+                
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const reportContainer = document.getElementById('pdf-report-container');
+                    const logoUrl = 'https://www.grupobancolombia.com/wcm/connect/www.grupobancolombia.com15880/dd92ab0c-ceb1-4e1a-82fc-d1a1d4cad0bd/logoDesk.png?MOD=AJPERES&CACHEID=ROOTWORKSPACE.Z18_9O44G4S049MAD06H7SNS78I2D3-dd92ab0c-ceb1-4e1a-82fc-d1a1d4cad0bd-pb4Fl5H';
+                    const radarImgData = riskRadarChart.toBase64Image();
+                    const tierInfo = {
+                        tier: data.tierResult,
+                        bgColor: 'bg-gray-100', textColor: 'text-gray-800', borderColor: 'border-gray-300'
+                    };
+                    if (data.tierResult === 'Tier 1') { tierInfo.bgColor = 'bg-red-50'; tierInfo.textColor = 'text-red-800'; tierInfo.borderColor = 'border-red-200'; } 
+                    else if (data.tierResult === 'Tier 2') { tierInfo.bgColor = 'bg-yellow-50'; tierInfo.textColor = 'text-yellow-800'; tierInfo.borderColor = 'border-yellow-200'; } 
+                    else if (data.tierResult === 'Tier 3') { tierInfo.bgColor = 'bg-green-50'; tierInfo.textColor = 'text-green-800'; tierInfo.borderColor = 'border-green-200'; }
+
+                    let scoreTableHtml = '';
+                    [...criteria.dimension1, ...criteria.dimension2].forEach(c => {
+                         scoreTableHtml += `
+                            <tr class="bg-white">
+                                <td class="border-b border-gray-200 p-4 align-top">
+                                    <p class="font-semibold">${c.name}</p>
+                                    <p class="text-xs text-gray-600 mt-1"><em>Justificación:</em> ${data.justifications[c.id] || 'N/A'}</p>
+                                </td>
+                                <td class="border-b border-gray-200 p-4 text-center align-top font-bold text-lg">${data.scores[c.id]}</td>
+                            </tr>`;
+                    });
+                    
+                    reportContainer.innerHTML = `
+                        <div id="report-content" class="p-10 bg-white" style="width: 210mm; font-family: 'Inter', sans-serif;">
+                            <img id="report-logo" src="${logoUrl}" style="height: 36px; margin-bottom: 2rem;" />
+                            <div class="flex justify-between items-start pb-4 border-b-2 border-gray-200">
+                                <h1 class="text-3xl font-bold text-gray-800">Reporte de Tiering</h1>
+                                <div class="text-right">
+                                    <p class="text-sm font-semibold text-gray-700">Solución Analítica</p>
+                                    <p class="text-xs text-gray-500">Fecha de Evaluación: ${new Date().toLocaleDateString('es-ES')}</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-x-12 mt-8">
+                                <div>
+                                    <h2 class="text-lg font-semibold text-gray-700 mb-3">Detalles de la Solución</h2>
+                                    <div class="space-y-3 text-sm">
+                                        <p><strong class="w-24 inline-block">ID:</strong><span>${data.solutionId}</span></p>
+                                        <p><strong class="w-24 inline-block">Nombre:</strong><span>${data.solutionName}</span></p>
+                                        <p><strong class="w-24 inline-block">Taxonomía:</strong><span class="font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-md">${data.taxonomy}</span></p>
+                                    </div>
+                                    <h2 class="text-lg font-semibold text-gray-700 mt-6 mb-3">Responsables</h2>
+                                    <div class="space-y-3 text-sm">
+                                        <p><strong class="w-24 inline-block">Desarrollador:</strong><span>${data.developerName}</span></p>
+                                        <p><strong class="w-24 inline-block">Validador:</strong><span>${data.validatorName}</span></p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-center justify-center p-6 rounded-lg ${tierInfo.bgColor} border ${tierInfo.borderColor}">
+                                    <h2 class="text-lg font-semibold text-gray-700">Resultado Final</h2>
+                                    <p class="text-6xl font-black my-2 ${tierInfo.textColor}">${tierInfo.tier}</p>
+                                    <div class="text-center">
+                                        <p class="text-xl font-bold text-indigo-600">Puntuación: ${data.finalScore}</p>
+                                        <div class="mt-2 text-xs text-gray-500 space-y-1">
+                                            <span>Dim. Complejidad: ${data.dim1Score}</span> |
+                                            <span>Dim. Impacto: ${data.dim2Score}</span>
+                                        </div>
+                                    </div>
+                                 </div>
+                            </div>
+                            <div class="grid grid-cols-5 gap-x-8 mt-10">
+                                <div class="col-span-3">
+                                    <h2 class="text-xl font-bold mb-4 text-gray-800">Detalle de la Evaluación</h2>
+                                    <table class="w-full text-sm table-auto">
+                                        <thead><tr class="bg-gray-200"><th class="px-4 py-2 text-left font-semibold text-gray-700 uppercase tracking-wider">Criterio y Justificación</th><th class="px-4 py-2 text-center font-semibold text-gray-700 uppercase tracking-wider w-32">Puntuación</th></tr></thead>
+                                        <tbody>${scoreTableHtml}</tbody>
+                                    </table>
+                                </div>
+                                <div class="col-span-2">
+                                    <h2 class="text-xl font-bold mb-4 text-gray-800">Perfil de Riesgo</h2>
+                                    <div class="p-4 border border-gray-200 rounded-lg bg-white">
+                                        <img src="${radarImgData}" class="w-full h-auto" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-12 pt-4 border-t border-gray-200 text-center text-xs text-gray-400">Reporte generado por la Herramienta Interactiva v2.1.</div>
+                        </div>
+                    `;
+                    
+                    const content = document.getElementById('report-content');
+                    reportContainer.classList.remove('pdf-render-area');
+                    
+                    const logoImg = new Image();
+                    logoImg.crossOrigin = "anonymous";
+                    logoImg.src = logoUrl;
+                    
+                    const processPDF = () => {
+                        html2canvas(content, { scale: 2, useCORS: true, logging: false }).then(canvas => {
+                            try {
+                                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                                const pdf = new jsPDF('p', 'mm', 'a4');
+                                const pdfWidth = pdf.internal.pageSize.getWidth();
+                                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                                if (pdfWidth > 0 && pdfHeight > 0) {
+                                    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                                    pdf.save(`Reporte_Tiering_${data.solutionId || 'solucion'}.pdf`);
+                                    showToast('PDF generado correctamente', 'success');
+                                } else {
+                                    throw new Error('Dimensiones inválidas para el PDF');
+                                }
+                            } catch(e) { 
+                                console.error("Error al generar PDF: ", e); 
+                                showToast('Error al generar el PDF. Intente nuevamente.', 'error'); 
+                            } 
+                            finally { 
+                                reportContainer.classList.add('pdf-render-area'); 
+                                reportContainer.innerHTML = '';
+                                hideLoader();
+                            }
+                        }).catch(error => {
+                            console.error("Error en html2canvas: ", error);
+                            showToast('Error al procesar el contenido del PDF.', 'error');
+                            hideLoader();
+                        });
+                    };
+                    
+                    logoImg.onload = processPDF;
+                    logoImg.onerror = () => {
+                         console.warn("No se pudo cargar el logo para el PDF. Continuando sin logo.");
+                         processPDF();
+                    };
+                    
+                } catch (error) {
+                    console.error("Error general en generatePDF: ", error);
+                    showToast('Error inesperado al generar PDF. Contacte soporte técnico.', 'error');
+                    hideLoader();
+                }
+            };
+
+            const exportCSV = () => {
+                 const data = getEvaluationData();
+                 if (data.tierResult === 'N/A') {
+                    showToast('Por favor, complete toda la evaluación antes de exportar.', 'error');
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                const headers = [
+                    "ID de la Solucion", "Nombre de la Solucion", "Desarrollador", "Validador",
+                    "Fecha de Evaluacion", "Taxonomia", "Tier Final", "Puntuacion Final",
+                    "Promedio Dimension 1", "Promedio Dimension 2",
+                    ...[...criteria.dimension1, ...criteria.dimension2].map(c => c.name),
+                    ...[...criteria.dimension1, ...criteria.dimension2].map(c => `Justificacion ${c.name}`)
+                ];
+                const row = [
+                    data.solutionId, data.solutionName, data.developerName, data.validatorName,
+                    new Date().toLocaleDateString('es-ES'), data.taxonomy, data.tierResult, data.finalScore,
+                    data.dim1Score, data.dim2Score,
+                    ...[...criteria.dimension1, ...criteria.dimension2].map(c => data.scores[c.id]),
+                    ...[...criteria.dimension1, ...criteria.dimension2].map(c => `"${(data.justifications[c.id] || '').replace(/"/g, '""')}"`)
+                ];
+
+                csvContent += headers.join(",") + "\r\n";
+                csvContent += row.join(",") + "\r\n";
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `Evaluacion_Tiering_${data.solutionId || 'solucion'}.csv`);
+                document.body.appendChild(link); 
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const triggerAutoSave = () => {
+                autosaveStatus.textContent = 'Guardando...';
+                clearTimeout(autoSaveTimeout);
+                autoSaveTimeout = setTimeout(() => {
+                    try {
+                        const data = getEvaluationData(true);
+                        localStorage.setItem('tieringAutoSave', JSON.stringify(data));
+                        autosaveStatus.textContent = 'Borrador guardado';
+                    } catch (error) {
+                        console.error('Error en auto-guardado:', error);
+                        autosaveStatus.textContent = 'Error al guardar';
+                        if (error.name === 'QuotaExceededError') {
+                            showToast('Almacenamiento lleno. El auto-guardado está deshabilitado.', 'error');
+                        }
+                    }
+                }, 2000);
+            };
+
+            const loadAutoSavedData = () => {
+                const autoSavedData = localStorage.getItem('tieringAutoSave');
+                if (autoSavedData) {
+                    if (confirm('Se encontró una evaluación no guardada. ¿Desea restaurarla?')) {
+                        const data = JSON.parse(autoSavedData);
+                        loadEvaluationData(data);
+                        showToast('Borrador restaurado.', 'info');
+                    } else {
+                        localStorage.removeItem('tieringAutoSave');
+                    }
+                }
+            };
+            
+            const loadEvaluationData = (evaluation) => {
+                document.getElementById('solution_id').value = evaluation.solutionId || '';
+                document.getElementById('solution_name').value = evaluation.solutionName || '';
+                document.getElementById('developer_name').value = evaluation.developerName || '';
+                document.getElementById('validator_name').value = evaluation.validatorName || '';
+                
+                if(evaluation.taxonomy) {
+                    const taxRadio = document.querySelector(`input[name="taxonomy"][value="${evaluation.taxonomy}"]`);
+                    if (taxRadio) {
+                        taxRadio.checked = true;
+                    }
+                }
+
+                if(evaluation.scores) {
+                    for (const key of Object.keys(evaluation.scores)) {
+                        const scoreValue = evaluation.scores[key];
+                        const radio = document.querySelector(`input[name="${key}"][value="${scoreValue}"]`);
+                        if(radio) {
+                            radio.checked = true;
+                            const justificationDiv = document.getElementById(`justification_${key}`);
+                            if (justificationDiv) justificationDiv.classList.add('visible');
+                        }
+                    }
+                }
+                
+                if(evaluation.justifications) {
+                    for (const [key, value] of Object.entries(evaluation.justifications)) {
+                         const textarea = document.getElementById(`text_${key}`);
+                         if (textarea) textarea.value = value;
+                    }
+                }
+                handleTaxonomyChange();
+                calculateScores();
+            };
+
+            const ValidationRules = {
+                solution_id: {
+                    required: true,
+                    pattern: /^[A-Za-z0-9_-]{3,50}$/,
+                    message: 'ID debe tener 3-50 caracteres alfanuméricos, guiones o guiones bajos'
+                },
+                solution_name: {
+                    required: true,
+                    minLength: 5,
+                    maxLength: 200,
+                    message: 'Nombre debe tener entre 5-200 caracteres'
+                }
+            };
+
+            const validateField = (fieldId, value) => {
+                const rule = ValidationRules[fieldId];
+                if (!rule) return { valid: true };
+                
+                if (rule.required && !value.trim()) {
+                    return { valid: false, message: 'Campo obligatorio' };
+                }
+                
+                if (rule.pattern && !rule.pattern.test(value)) {
+                    return { valid: false, message: rule.message };
+                }
+                
+                if (rule.minLength && value.length < rule.minLength) {
+                    return { valid: false, message: rule.message };
+                }
+                
+                if (rule.maxLength && value.length > rule.maxLength) {
+                    return { valid: false, message: rule.message };
+                }
+                
+                return { valid: true };
+            };
+
+            const sanitizeInput = (input) => {
+                return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                            .replace(/[<>]/g, '');
+            };
+
+            const validateForm = () => {
+                let isValid = true;
+                const requiredFields = ['solution_id', 'solution_name'];
+                
+                requiredFields.forEach(id => {
+                    const input = document.getElementById(id);
+                    const error = document.getElementById(`${id}-error`);
+                    const value = sanitizeInput(input.value);
+                    const validation = validateField(id, value);
+                    
+                    if (!validation.valid) {
+                        input.classList.add('border-red-500');
+                        error.textContent = validation.message;
+                        error.classList.remove('hidden');
+                        isValid = false;
+                    } else {
+                        input.classList.remove('border-red-500');
+                        error.classList.add('hidden');
+                        input.value = value; // Aplicar sanitización
+                    }
+                });
+                
+                return isValid;
+            };
+
+            const showToast = (message, type = 'success') => {
+                const toastContainer = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 500);
+                }, 4000);
+            };
+
+            const showLoader = () => loaderOverlay.style.display = 'flex';
+            const hideLoader = () => loaderOverlay.style.display = 'none';
+            
+            const checkPrerequisites = () => {
+                const solutionId = document.getElementById('solution_id').value.trim();
+                const solutionName = document.getElementById('solution_name').value.trim();
+                const taxonomySelected = document.querySelector('input[name="taxonomy"]:checked');
+                
+                if (solutionId && solutionName && taxonomySelected) {
+                    evaluationFieldset.disabled = false;
+                } else {
+                    evaluationFieldset.disabled = true;
+                }
+            };
+
+            // --- INICIALIZACIÓN ---
+            buildForm();
+            addEventListeners();
+            initializeChart();
+            renderDashboard();
+            loadAutoSavedData();
+        });
+    </script>
+</body>
+</html>
