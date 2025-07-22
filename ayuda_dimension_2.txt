@@ -1,0 +1,36 @@
+1.	Impacto Económico: Evalúa el impacto monetario directo que una falla podría causar. Para que una solución analítica se ubique en un nivel específico, al menos una de las preguntas del nivel debe ser respondida con SI, mientras que las preguntas del nivel siguiente superior deben ser respondidas con NO.
+
+Nivel 1(Bajo): ¿El modelo se usa principalmente para análisis internos? ¿Sus resultados afectan únicamente a un equipo o área de la organización? ¿Un fallo resultaría en una inconveniencia sin pérdidas financieras directas?
+Escenario típico: un fallo no produce pérdidas económicas cuantificables significativas. Se usa para fines operativos internos con bajo riesgo, afectando solo a un equipo de la organización.
+Ejemplo: un modelo que optimiza la asignación de tareas internas.
+
+Nivel 2 (Moderado): ¿El modelo apoya una decisión con un componente financiero notable? ¿Un fallo podría causar pérdidas gestionables? ¿Afecta a varias áreas de la organización o a un segmento de clientes considerable?
+Escenario típico: un fallo podría resultar en pérdidas menores o moderadas, pero gestionables. Apoya decisiones con implicaciones financieras que involucran a diferentes áreas de la organización.
+Ejemplo: un modelo que sugiere precios para productos de crédito al consumo.
+
+Nivel 3 (Alto): ¿El resultado impacta directamente en los estados financieros, el cálculo de capital o las provisiones? ¿Es un componente clave para reportes regulatorios? ¿Un fallo podría resultar en multas significativas?
+Escenario típico: un fallo podría resultar en multas o pérdidas sustanciales. La solución se usa en decisiones críticas o reportes de carácter regulatorio.
+Ejemplo: un modelo de Pérdida Crediticia Esperada.
+Nivel 4 (Crítico): ¿Un fallo podría comprometer la solvencia o la continuidad del negocio? ¿Gestiona un volumen de transacciones tan masivo que un error podría generar pérdidas catastróficas?
+Escenario típico: un fallo comprometería la solvencia o continuidad del negocio. Involucra transacciones u operaciones masivas. 
+Ejemplo: un modelo de trading algorítmico que opera con miles de millones de dólares.
+
+2.	Uso y visibilidad: indica si el modelo es usado en un proceso crítico, si impacta reportes a terceros, informes a reguladores, agencias de calificación, accionistas, si involucra a varias áreas de la organización. Para que una solución analítica se ubique en un nivel específico, al menos una de las preguntas del nivel debe ser respondida con SI, mientras que las preguntas del nivel siguiente superior deben ser respondidas con NO.
+Nivel 1 (Bajo): ¿La solución apoya un proceso puramente interno y no misional? ¿Una falla tiene alternativas manuales fáciles? ¿El proceso no es crítico (BIA, No BIA) ni SOX?
+Escenario Típico: Una herramienta para la planificación de horarios de un equipo de back-office.
+Nivel 2 (Moderado): ¿La solución apoya un proceso misional de menor escala o uno "Crítico No BIA"? ¿Una falla podría afectar la experiencia del cliente de forma limitada?
+Escenario Típico: Un modelo que optimiza la asignación de reclamos de clientes.
+Nivel 3 (Alto): ¿La solución es un componente integral de un proceso misional de alto impacto o de un proceso SOX? ¿Un fallo podría impedir la entrega de un producto clave o generar errores en reportes financieros?
+Escenario Típico: Un sistema de cálculo de provisiones que alimenta los estados financieros.
+Nivel 4 (Crítico): ¿La solución es fundamental para un proceso "Crítico BIA"? ¿Una falla podría desencadenar un plan de recuperación de desastres?
+Escenario Típico: Un sistema de procesamiento de pagos interbancarios.
+
+3.	Impacto Reputacional y Ético: estima el daño potencial a la marca, la confianza del cliente, y los riesgos de resultados injustos o discriminatorios que afecten la percepción pública. Para que una solución analítica se ubique en un nivel específico, al menos una de las preguntas del nivel debe ser respondida con SI, mientras que las preguntas del nivel siguiente superior deben ser respondidas con NO.
+Nivel 1 (Bajo): ¿Un fallo podría generar quejas aisladas y manejables? ¿El riesgo de sesgo es mínimo o inexistente?
+Ejemplo: Un modelo de segmentación interna para campañas de marketing.
+Nivel 2 (Moderado): ¿Un fallo podría generar ruido en redes sociales o medios locales? ¿Existen riesgos de sesgo que son monitoreables y mitigables?
+Ejemplo: Un chatbot de atención al cliente que ocasionalmente da respuestas incorrectas.
+Nivel 3 (Alto): ¿Un fallo podría erosionar significativamente la confianza en la marca? ¿El modelo toma decisiones que podrían ser percibidas como discriminatorias a gran escala?
+Escenario Típico: Un modelo de aprobación de créditos que muestra un sesgo sistemático.
+Nivel 4 (Crítico): ¿Un fallo podría desencadenar una crisis de relaciones públicas a nivel nacional o internacional? ¿El modelo toma decisiones sobre derechos fundamentales?
+Escenario Típico: Una IA generativa que produce masivamente información falsa o dañina.
